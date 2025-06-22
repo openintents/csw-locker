@@ -2,19 +2,22 @@
 import WalletLayout from "@/components/WalletLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { History } from "lucide-react";
+import { Clock, FileCode, Filter, History, Loader2, RefreshCw, Send, Wallet, X } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { useSelectedWallet } from "@/hooks/useSelectedWallet";
 import { useBlockchainService } from "@/hooks/useBlockchainService";
 import SecondaryButton from "@/components/ui/secondary-button";
 import TransactionItem from "@/components/transaction/TransactionItem";
+import { Skeleton } from "@/components/ui/skeleton";
+import { fetchStxUsdPrice } from "@/lib/stxPrice";
+import { Transaction } from "@/services/transactionDataService";
 
 const limit = 20;
 
 const ActionHistory = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const { selectedWallet } = useSelectedWallet();
-  const { transactions, loadRecentData, hasMoreTxs, isLoading, isDemoMode } = useBlockchainService();
+  const { transactions, loadRecentData, isLoading, isDemoMode } = useBlockchainService();
 
   const [offset, setOffset] = useState(0);
   const [stxUsd, setStxUsd] = useState<number | null>(null);
@@ -24,12 +27,13 @@ const ActionHistory = () => {
   const [filterAction, setFilterAction] = useState<string>("all");
   const [showFilter, setShowFilter] = useState(false);
 
+
   useEffect(() => {
     if (selectedWallet?.address) {
       console.log('Loading transaction data for:', selectedWallet.address);
-      loadRecentData(selectedWallet.address, currentOffset, limit);
+      loadRecentData(selectedWallet.address, offset, limit);
     }
-  }, [selectedWallet?.address, loadRecentData, currentOffset]);
+  }, [selectedWallet?.address, loadRecentData, offset, limit]);
 
   useEffect(() => {
     fetchStxUsdPrice().then(setStxUsd);
@@ -38,14 +42,14 @@ const ActionHistory = () => {
   const loadMore = () => {
     const newOffset = offset + 20;
     setOffset(newOffset);
-    fetchTransactions(newOffset);
+    loadRecentData(selectedWallet.address, newOffset);
   };
 
   const handleRefresh = async () => {
     setRefreshing(true);
     setOffset(0);
     setDisplayCount(5);
-    await fetchTransactions(0);
+    await loadRecentData(selectedWallet.address, 0);
     setRefreshing(false);
   };
 
@@ -101,6 +105,20 @@ const ActionHistory = () => {
     failed: transactions.filter(tx => tx.status === 'failed').length
   }), [transactions]);
 
+  // Helper to get a user-friendly label for each transaction type/action
+  const getTxLabel = (tx: Transaction) => {
+    if (tx.action === 'sent') return 'Send';
+    if (tx.action === 'receive') return 'Receive';
+    if (tx.action === 'contract_call') return 'Contract Call';
+    if (tx.action === 'contract_deploy') return 'Contract Deploy';
+    if (tx.action?.toLowerCase().includes('airdrop')) return 'Airdrop';
+    if (tx.action?.toLowerCase().includes('send-many')) return 'Send-Many';
+    if (tx.action?.toLowerCase().includes('mint')) return 'Mint';
+    if (tx.action?.toLowerCase().includes('transfer')) return 'Token Transfer';
+    if (tx.assetType === 'nft') return 'NFT Transfer';
+    return tx.action?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Other';
+  };
+
   return (
     <WalletLayout>
       <div className="space-y-6">
@@ -120,7 +138,7 @@ const ActionHistory = () => {
                 Transaction History
               </CardTitle>
               <div className="relative flex items-center gap-2">
-                 {/* Active filters display */}
+                {/* Active filters display */}
                 {(filterType !== 'all' || filterAction !== 'all') && (
                   <div className="flex items-center gap-2 mr-2">
                     {filterType !== 'all' && (
@@ -133,7 +151,7 @@ const ActionHistory = () => {
                     )}
                     {filterAction !== 'all' && (
                       <span className="flex items-center bg-slate-700 text-white rounded px-2 py-1 text-xs">
-                        {getTxLabel({action: filterAction, assetType: undefined} as Transaction)}
+                        {getTxLabel({ action: filterAction, assetType: undefined } as Transaction)}
                         <button onClick={() => setFilterAction('all')} className="ml-1 text-slate-400 hover:text-white focus:outline-none">
                           <X className="w-3 h-3" />
                         </button>
@@ -174,15 +192,15 @@ const ActionHistory = () => {
                       <label className="block text-xs text-slate-400 mb-1">Action</label>
                       <select value={filterAction} onChange={e => setFilterAction(e.target.value)} className="w-full bg-slate-700 text-white rounded p-1">
                         <option value="all">All</option>
-                        {txActions.map(action => <option key={action} value={action}>{getTxLabel({action, assetType: undefined} as Transaction)}</option>)}
+                        {txActions.map(action => <option key={action} value={action}>{getTxLabel({ action, assetType: undefined } as Transaction)}</option>)}
                       </select>
                     </div>
                   </div>
                 </div>
-                <Button onClick={handleRefresh} variant="secondary" className="ml-2 flex items-center justify-center min-w-[90px]" disabled={refreshing || isLoading}>
+                <SecondaryButton onClick={handleRefresh} className="ml-2 flex items-center justify-center min-w-[90px]" disabled={refreshing || isLoading}>
                   {refreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Refresh
-                </Button>
+                </SecondaryButton>
               </div>
             </div>
           </CardHeader>
@@ -213,9 +231,9 @@ const ActionHistory = () => {
             ) : (
               <div className="space-y-3">
                 {visibleTransactions.map((tx) => (
-                  <TransactionItem 
-                    key={tx.id} 
-                    transaction={tx} 
+                  <TransactionItem
+                    key={tx.id}
+                    transaction={tx}
                     showFullDetails={true}
                     selectedWalletAddress={selectedWallet?.address}
                   />
