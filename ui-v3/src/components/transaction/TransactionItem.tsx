@@ -4,7 +4,7 @@ import { ArrowUpRight, ArrowDownLeft, TrendingUp, Activity } from "lucide-react"
 interface TransactionItemProps {
   transaction: {
     id: string;
-    type: 'send' | 'receive' | 'stacking';
+    action: 'send' | 'receive' | 'stacking';
     asset: string;
     amount: string;
     timestamp: string;
@@ -18,8 +18,8 @@ interface TransactionItemProps {
 }
 
 const TransactionItem = ({ transaction, showFullDetails = false, selectedWalletAddress }: TransactionItemProps) => {
-  const getTransactionIcon = (type: string) => {
-    switch (type) {
+  const getTransactionIcon = (action: string) => {
+    switch (action) {
       case 'send':
         return ArrowUpRight;
       case 'receive':
@@ -68,8 +68,8 @@ const TransactionItem = ({ transaction, showFullDetails = false, selectedWalletA
     return amount.startsWith('+') ? 'text-green-400' : 'text-red-400';
   };
 
-  const Icon = getTransactionIcon(transaction.type);
-  const activityColor = getActivityColor(transaction.type);
+  const Icon = getTransactionIcon(transaction.action);
+  const activityColor = getActivityColor(transaction.action);
   const statusColor = getStatusColor(transaction.status);
 
   return (
@@ -80,7 +80,7 @@ const TransactionItem = ({ transaction, showFullDetails = false, selectedWalletA
         </div>
         <div>
           <div className="text-white font-medium capitalize">
-            {transaction.type} {transaction.asset}
+            {transaction.action} {transaction.asset}
           </div>
           <div className="text-slate-400 text-sm">{transaction.timestamp}</div>
           {showFullDetails && transaction.txHash && (

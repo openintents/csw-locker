@@ -1,6 +1,6 @@
 
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity } from "lucide-react";
+import { Activity, Loader2 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useBlockchainService } from "@/hooks/useBlockchainService";
@@ -8,6 +8,8 @@ import SecondaryButton from "../ui/secondary-button";
 import CSWCard from "@/components/ui/csw-card";
 import TransactionItem from "../transaction/TransactionItem";
 import { useSelectedWallet } from "@/hooks/useSelectedWallet";
+import { Skeleton } from "../ui/skeleton";
+import { fetchStxUsdPrice } from "@/lib/stxPrice";
 
 interface ActivityItem {
   id: string;
@@ -27,6 +29,12 @@ const RecentActivity = ({ activities = [] }: RecentActivityProps) => {
   const { selectedWallet } = useSelectedWallet();
   const { loadRecentData, transactions, isLoading } = useBlockchainService();
   const [weeklyTransactionCount, setWeeklyTransactionCount] = useState(0);
+
+  const [loading, setLoading] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [stxUsd, setStxUsd] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (walletId) {
@@ -53,12 +61,23 @@ const RecentActivity = ({ activities = [] }: RecentActivityProps) => {
         const weeks = parseInt(tx.timestamp);
         txDate.setDate(txDate.getDate() - (weeks * 7));
       }
-      
+
       return txDate >= oneWeekAgo;
     });
 
     setWeeklyTransactionCount(weeklyTransactions.length);
   }, [transactions]);
+
+  useEffect(() => {
+    fetchStxUsdPrice().then(setStxUsd);
+  }, []);
+
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setOffset(0);
+    setRefreshing(false);
+  };
 
   // Use fetched transactions or fallback to provided activities
   const displayActivities = transactions.length > 0 ? transactions.slice(0, 3) : activities.slice(0, 3);
@@ -77,26 +96,46 @@ const RecentActivity = ({ activities = [] }: RecentActivityProps) => {
         </SecondaryButton>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
-          <div className="text-slate-400 text-center py-4">Loading transactions...</div>
-        ) : (
-          <>
-            <div className="mb-4 p-3 bg-slate-700/30 rounded-lg">
-              <div className="text-sm text-slate-400">Last 7 Days</div>
-              <div className="text-xl font-bold text-white">{weeklyTransactionCount} Transactions</div>
-            </div>
-            
-            <div className="space-y-3">
-              {displayActivities.map((activity) => (
-                <TransactionItem 
-                  key={activity.id} 
-                  transaction={activity} 
-                  selectedWalletAddress={selectedWallet?.address}
-                />
-              ))}
-            </div>
-          </>
-        )}
+        {error && <div className="text-red-400 mb-2">{error}</div>}
+        <div className="space-y-3">
+          {loading && activities.length === 0 ? (
+            [...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <Skeleton className="w-8 h-8 rounded-full" />
+                  <div>
+                    <Skeleton className="h-4 w-24 mb-2" />
+                    <Skeleton className="h-3 w-32 mb-1" />
+                  </div>
+                </div>
+                <div className="text-right">
+                  <Skeleton className="h-4 w-16 mb-2" />
+                  <Skeleton className="h-3 w-10" />
+                </div>
+              </div>
+            ))
+          ) : (
+            activities.slice(0, 5).map((activity) => {
+              return <TransactionItem
+                key={activity.id}
+                transaction={activity}
+                selectedWalletAddress={selectedWallet?.address}
+              />
+            })
+          )}
+        </div>
+        {/* Only show the button if there are more than 5 activities */}
+        <div className="flex justify-end mt-4">
+          <SecondaryButton
+            onClick={handleRefresh}
+            variant="secondary"
+            className="flex items-center justify-center min-w-[90px]"
+            disabled={refreshing || loading}
+          >
+            {refreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Refresh
+          </SecondaryButton>
+        </div>
       </CardContent>
     </CSWCard>
   );
