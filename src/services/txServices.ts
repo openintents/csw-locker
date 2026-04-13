@@ -14,7 +14,7 @@ import {
   Pc,
   serializeCV,
 } from "@stacks/transactions";
-import { hexToBytes } from "@noble/hashes/utils";
+import { hexToBytes } from "@noble/hashes/utils.js";
 import { StacksNetworkName } from "@stacks/network";
 
 export interface TransactionParams {
