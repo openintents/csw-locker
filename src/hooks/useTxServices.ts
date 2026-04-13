@@ -1,4 +1,5 @@
 import { useToast } from "@/hooks/use-toast";
+import { useDemoMode } from "@/contexts";
 import {
   ExtensionCallParams,
   TransactionParams,
@@ -6,6 +7,13 @@ import {
 } from "@/services/txServices";
 import { TransactionResult } from "@stacks/connect/dist/types/methods";
 import { useCallback, useState } from "react";
+
+const DEMO_TXID =
+  "0xdemo00000000000000000000000000000000000000000000000000000000demo";
+
+const demoResult = (): TransactionResult => ({
+  txid: DEMO_TXID,
+} as TransactionResult);
 
 /**
  * Custom hook for managing transaction services
@@ -15,14 +23,30 @@ export const useTxServices = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { isDemoMode } = useDemoMode();
 
   const txServices = new TxServices();
+
+  // In demo mode, surface a toast and short-circuit before touching the
+  // wallet extension. Mutations resolve to a fake tx receipt so downstream
+  // success handlers (navigation, optimistic UI) still run.
+  const demoNoop = useCallback(
+    <T>(action: string, fakeResult: T): T => {
+      toast({
+        title: "Demo mode",
+        description: `${action} is disabled — no transaction was broadcast.`,
+      });
+      return fakeResult;
+    },
+    [toast]
+  );
 
   /**
    * Send a transaction (token or NFT)
    */
   const sendTransaction = useCallback(
     async (params: TransactionParams): Promise<TransactionResult | null> => {
+      if (isDemoMode) return demoNoop("Send", demoResult());
       setIsLoading(true);
       setError(null);
 
@@ -51,7 +75,7 @@ export const useTxServices = () => {
         setIsLoading(false);
       }
     },
-    [toast]
+    [toast, isDemoMode, demoNoop]
   );
 
   /**
@@ -62,6 +86,10 @@ export const useTxServices = () => {
       walletId: `${string}.${string}`,
       params: ExtensionCallParams
     ): Promise<void | null> => {
+      if (isDemoMode) {
+        demoNoop("Extension call", undefined);
+        return;
+      }
       setIsLoading(true);
       setError(null);
       try {
@@ -91,7 +119,7 @@ export const useTxServices = () => {
         setIsLoading(false);
       }
     },
-    [toast]
+    [toast, isDemoMode, demoNoop]
   );
 
   /**
@@ -99,6 +127,10 @@ export const useTxServices = () => {
    */
   const deployContract = useCallback(
     async (params: any): Promise<void | null> => {
+      if (isDemoMode) {
+        demoNoop("Contract deploy", undefined);
+        return;
+      }
       setIsLoading(true);
       setError(null);
 
@@ -127,7 +159,7 @@ export const useTxServices = () => {
         setIsLoading(false);
       }
     },
-    [toast]
+    [toast, isDemoMode, demoNoop]
   );
 
   /**
@@ -138,6 +170,7 @@ export const useTxServices = () => {
       contractAddress: string;
       adminAddress: string;
     }): Promise<TransactionResult | null> => {
+      if (isDemoMode) return demoNoop("Add admin", demoResult());
       setIsLoading(true);
       setError(null);
 
@@ -166,7 +199,7 @@ export const useTxServices = () => {
         setIsLoading(false);
       }
     },
-    [toast]
+    [toast, isDemoMode, demoNoop]
   );
 
   /**
@@ -177,6 +210,7 @@ export const useTxServices = () => {
       contractAddress: string;
       newOwnerAddress: string;
     }): Promise<TransactionResult | null> => {
+      if (isDemoMode) return demoNoop("Transfer ownership", demoResult());
       setIsLoading(true);
       setError(null);
 
@@ -207,7 +241,7 @@ export const useTxServices = () => {
         setIsLoading(false);
       }
     },
-    [toast]
+    [toast, isDemoMode, demoNoop]
   );
 
   /**
@@ -224,6 +258,7 @@ export const useTxServices = () => {
       contractAddress?: string;
       decimal: number;
     }): Promise<{ txid: string } | null> => {
+      if (isDemoMode) return demoNoop("Deposit", { txid: DEMO_TXID });
       setIsLoading(true);
       setError(null);
       try {
@@ -251,7 +286,7 @@ export const useTxServices = () => {
         setIsLoading(false);
       }
     },
-    [toast]
+    [toast, isDemoMode, demoNoop]
   );
 
   /**
@@ -259,6 +294,7 @@ export const useTxServices = () => {
    */
   const isAdmin = useCallback(
     async (address: string, contractId: string): Promise<boolean> => {
+      if (isDemoMode) return true;
       try {
         const result = await txServices.isAdmin(address, contractId);
         return result;
@@ -266,7 +302,7 @@ export const useTxServices = () => {
         return false;
       }
     },
-    []
+    [isDemoMode]
   );
 
   /**
