@@ -1,5 +1,4 @@
 import { getClientConfig } from "@/utils/chain-config";
-import { formatDecimals } from "@/utils/numbers";
 import { isConnected, request } from "@stacks/connect";
 import {
   CallContractParams,
@@ -7,6 +6,7 @@ import {
   TransactionResult,
   TransferStxParams,
 } from "@stacks/connect/dist/types/methods";
+import { StacksNetworkName } from "@stacks/network";
 import {
   Cl,
   cvToValue,
@@ -14,9 +14,7 @@ import {
   Pc,
   serializeCV,
 } from "@stacks/transactions";
-import { hexToBytes } from "@noble/hashes/utils.js";
-import { StacksNetworkName } from "@stacks/network";
-
+import { hexToBytes } from "@stacks/common";
 export interface TransactionParams {
   from: string;
   to: string;
