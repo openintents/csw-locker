@@ -17,7 +17,7 @@ export function useAccountBalanceService(walletAddress: string) {
   const [sBtcBalance, setSBtcBalance] = useState<FungibleType | null>(null);
 
   // Check if we're in demo mode
-  const isDemoMode = useDemoMode();
+  const { isDemoMode } = useDemoMode();
 
   // Select the appropriate service based on demo mode
   const balancesService = useMemo(() => {

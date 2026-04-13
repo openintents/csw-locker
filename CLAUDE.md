@@ -45,7 +45,9 @@ Transactions are built in `src/services/txServices.ts` using `@stacks/transactio
 
 ### Demo Mode
 
-`?demo=true` activates demo mode with a hardcoded address. All write operations must be no-ops in demo — do not call signing or broadcast APIs. Gate mutation entrypoints on `useDemoMode()`.
+`?demo=true` activates demo mode with a hardcoded address. All write operations are no-ops — `useTxServices` short-circuits every mutation (`sendTransaction`, `callExtensionContract`, `deployContract`, `addAdmin`, `transferOwnership`, `deposit`) and returns a fake tx receipt with a "Demo mode" toast, never reaching `@stacks/connect`. Read paths swap real services for `Mock*` variants in `useSmartWalletContractService` / `useAccountBalanceService` (gated on `useDemoMode().isDemoMode` — note the destructure: the hook returns the full context object).
+
+If you add a new mutation, route it through `useTxServices` so the demo gate stays a single chokepoint.
 
 ### Contracts
 
