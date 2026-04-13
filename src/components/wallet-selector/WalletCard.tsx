@@ -1,8 +1,10 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Wallet, Settings, CopyIcon } from "lucide-react";
+import { Settings, CopyIcon } from "lucide-react";
 import GreenButton from "../ui/green-button";
+import ContractIdenticon from "@/components/ContractIdenticon";
+import type { ContractId } from "@/utils/contractIdenticon";
 import { SmartWallet } from "@/services/interfaces";
 import { useState } from "react";
 import { useAccountBalanceService } from "@/hooks/useAccountBalanceService";
@@ -39,7 +41,11 @@ const WalletCard = ({ wallet }: WalletCardProps) => {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-white flex items-center">
-            <Wallet className="mr-2 h-5 w-5 text-purple-400" />
+            <ContractIdenticon
+              contractId={wallet.contractId as ContractId}
+              size={20}
+              className="mr-2"
+            />
             {wallet?.label}
             {wallet.ext && (
               <span className="ml-2 px-2 py-1 bg-blue-600/20 text-blue-300 text-xs rounded">
